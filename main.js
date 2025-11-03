@@ -1,74 +1,7 @@
-// main.js — p5 lifecycle and engine instance bootstrap
-// This file should be loaded after p5.js and engine.js in index.html
-
-// We expect window.ENGINE_ASSETS and window.ENGINE_CONFIG (optional) to be set before engine.js loads.
-
 let engineInstance = null;
 
-let basicMap1 = [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-2,0,0,0,0,2,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-2,0,0,0,0,2,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-2,0,0,0,0,2,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,2,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,2,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            ];
-let basicMap2 = [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-3,0,0,0,0,3,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-3,0,0,0,0,3,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-3,0,0,0,0,3,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,3,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,3,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            ];
-let basicMap3 = [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-1,0,0,0,0,4,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-1,0,0,0,0,4,1,1,1,1,1,1,1],
-                [1,0,0,0,0,-1,0,0,0,0,4,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,4,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,4,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1],
-                [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            ];
 
+//플레이어 및 맵 기본 정보와 벽 데이터 불러오기
 function preload() {
     // Create FullEngine instance early so its preload() can call loadImage in the p5 preload phase.
     if (!window.FullEngine) {
@@ -95,7 +28,7 @@ function preload() {
     try { window.ENGINE_ASSETS = config.assets.slice(); } catch(e) {}
 
     // If user didn't provide player config, create default here
-    config.player = config.player || { x: 13, y: 13, rot: 65, moveSpeed: 0.1, rotSpeed: 3 * Math.PI / 180 };
+    config.player = config.player || { x: 25.5, y: 33.5, rot: radians(180), moveSpeed: 0.1, rotSpeed: 3 * Math.PI / 180 };
     //config.player = config.player || { x: 2, y: 2, rot: 300, moveSpeed: 0.1, rotSpeed: 3 * Math.PI / 180 };
     engineInstance = new FullEngine(config);
     window.engine = engineInstance;
@@ -103,12 +36,11 @@ function preload() {
     if (typeof engineInstance.preload === 'function') engineInstance.preload();
 }
 
+//엔진이 가져와졌는지 체크
 function setup() {
     if (!engineInstance) return;
-    // call engine setup to create canvas and initialize
     if (typeof engineInstance.setup === 'function') engineInstance.setup();
 
-    // 기본적으로 키보드 입력을 활성화하여 화살표 키로 조작할 수 있게 함
     if (typeof engineInstance.enableKeyboard === 'function') engineInstance.enableKeyboard();
 
 }
@@ -122,22 +54,55 @@ function draw() {
     console.log(data);
 
     let blockData= engineInstance.getPlayerBlock()
+    blockEvents(blockData)
+}
+
+function blockEvents(blockData){
+    if (!engineInstance) return;
     if(blockData!=0)
     {
-        let x=engineInstance.getPlayerLocX()+6;
-        let y=engineInstance.getPlayerLocY()+6;
-        console.log(x,"  ",y)
-        if(blockData == -1){
-            engineInstance.setPlayerLoc(x,y);
-            engineInstance.setWorldMap(basicMap1);
+        blockData*=-1;
+        if( blockData<10 )
+        {
+            let x=engineInstance.getPlayerLocX()+17;
+            let y=engineInstance.getPlayerLocY()+24;
+            switch(blockData){
+                case 1:
+                    engineInstance.setWorldMap(basicMap1);
+                    engineInstance.setPlayerLoc(x,y);
+                break;
+                case 2:
+                    engineInstance.setWorldMap(basicMap2);
+                    engineInstance.setPlayerLoc(x,y);
+                break;
+                case 3:
+                    engineInstance.setWorldMap(basicMap3);
+                    engineInstance.setPlayerLoc(x,y);
+                break;
+            }
         }
-        else if(blockData == -2){
-            engineInstance.setPlayerLoc(x,y);
-            engineInstance.setWorldMap(basicMap2);
-        }
-        else if(blockData == -3){
-            engineInstance.setPlayerLoc(x,y);
-            engineInstance.setWorldMap(basicMap3);
+        else if( blockData<20 )
+        {
+            let x=engineInstance.getPlayerLocX()-3;
+            let y=(33.5-engineInstance.getPlayerLocY())+33.5;
+            let rot = engineInstance.getPlayerRot()-radians(180);
+            switch(blockData){
+                case 11:
+                    engineInstance.setWorldMap(basicMap1);
+                    engineInstance.setPlayerLoc(x,y);
+                    engineInstance.setPlayerRot(rot);
+                break;
+                case 12:
+                    engineInstance.setWorldMap(basicMap2);
+                    engineInstance.setPlayerLoc(x,y);
+                    engineInstance.setPlayerRot(rot);
+                break;
+                case 13:
+                    engineInstance.setWorldMap(basicMap3);
+                    engineInstance.setPlayerLoc(x,y);
+                    engineInstance.setPlayerRot(rot);
+                break;
+            }
         }
     }
 }
