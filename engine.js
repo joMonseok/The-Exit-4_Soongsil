@@ -237,40 +237,6 @@ class FullEngine {
   {
     return this.player.rot;
   }
-  /**
-   * Rotate player's position around a given point by angleRad (radians).
-   * Default angleRad = Math.PI (180°). Optionally rotate player's facing as well.
-   * Returns an object: { success: boolean, x, y, rot, reason? }
-   */
-  rotatePlayerAround(cx, cy, angleRad = Math.PI, rotateFacing = true) {
-    if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(angleRad)) {
-      return { success: false, reason: 'invalid-args' };
-    }
-    const dx = this.player.x - cx;
-    const dy = this.player.y - cy;
-    const ca = Math.cos(angleRad);
-    const sa = Math.sin(angleRad);
-    const nx = cx + dx * ca - dy * sa;
-    const ny = cy + dx * sa + dy * ca;
-    // check bounds / collision
-    if (!Number.isFinite(nx) || !Number.isFinite(ny)) return { success: false, reason: 'nan-result' };
-    const ix = Math.floor(nx), iy = Math.floor(ny);
-    if (iy < 0 || iy >= this.mapHeight || ix < 0 || ix >= this.mapWidth) {
-      return { success: false, reason: 'out-of-bounds' };
-    }
-    if (this.isBlocking(nx, ny)) {
-      return { success: false, reason: 'blocked' };
-    }
-    // apply new position
-    this.player.x = nx;
-    this.player.y = ny;
-    if (rotateFacing) {
-      this.player.rot += angleRad;
-      this.player.rot %= this.twoPI;
-      if (this.player.rot < 0) this.player.rot += this.twoPI;
-    }
-    return { success: true, x: this.player.x, y: this.player.y, rot: this.player.rot };
-  }
 }
 
 window.FullEngine = FullEngine;

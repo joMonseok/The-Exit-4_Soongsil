@@ -3,7 +3,7 @@ let engineInstance = null;
 let startX = 25.5;
 let startY = 36.5;
 
-
+let doorOpenSound;
 
 //플레이어 및 맵 기본 정보와 벽 데이터 불러오기
 function preload() {
@@ -25,8 +25,26 @@ function preload() {
     }
     // assets to load (textures)
     const assets = window.ENGINE_ASSETS && Array.isArray(window.ENGINE_ASSETS) && window.ENGINE_ASSETS.length ? window.ENGINE_ASSETS : [
-        'assets/tile_basic.png','assets/0_Exits.png','assets/1_Exits.png','assets/2_Exits.png','assets/3_Exits.png','assets/4_Exits.png'
+        'assets/tile_basic.png',    // 1
+        'assets/0_Exits.png',       // 2
+        'assets/1_Exits.png',       // 3
+        'assets/2_Exits.png',       // 4
+        'assets/3_Exits.png',       // 5
+        'assets/4_Exits.png',       // 6
+        'assets/close_door.png',    // 7
+        'assets/open_door.png',     // 8
+        'assets/poster1.png',       // 9
+        'assets/poster1_trans.png', // 10
+        'assets/poster2.png',       // 11
+        'assets/poster2_trans.png', // 12
+        'assets/poster3.png',       // 13
+        'assets/poster3_trans.png', // 14
+        'assets/poster4.png',       // 15
+        'assets/poster4_trans.png', // 16
+        'assets/poster5.png',       // 17
+        'assets/poster5_trans.png'  // 18
     ];
+
     config.assets = config.assets || assets.slice();
     // mirror to global for compatibility
     try { window.ENGINE_ASSETS = config.assets.slice(); } catch(e) {}
@@ -38,6 +56,9 @@ function preload() {
     window.engine = engineInstance;
     // call engine preload to load assets via p5.loadImage
     if (typeof engineInstance.preload === 'function') engineInstance.preload();
+
+    console.log("Hello World!");
+    doorOpenSound = loadSound('assets/door_open_sound.mp3');
 }
 
 //엔진이 가져와졌는지 체크
@@ -105,6 +126,18 @@ function blockEvents(blockData){
                     engineInstance.setWorldMap(basicMap3);
                     engineInstance.setPlayerLoc(x,y);
                     engineInstance.setPlayerRot(rot);
+                break;
+            }
+        }
+        else if( blockData<30 )
+        {
+            switch(blockData){
+                case 21:
+                    engineInstance.setBlock(14, 18, 8); 
+                    engineInstance.setBlock(13, 14, 0); 
+                    engineInstance.setBlock(12, 14, 0); 
+                    engineInstance.setBlock(11, 14, 0); 
+                    doorOpenSound.play();
                 break;
             }
         }
