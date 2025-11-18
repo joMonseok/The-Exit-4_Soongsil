@@ -5,7 +5,7 @@ let startY = 36.5;
 
 let doorOpenSound;
 let chkAnomalyNum=0;
-let anomalyState=true;
+let anomalyState=false;
 
 const myWorker = new Worker('worker.js');
 
@@ -20,6 +20,13 @@ function preload() {
     // Build config (map, player, assets) here in main and pass to engine
     const config = window.ENGINE_CONFIG ? Object.assign({}, window.ENGINE_CONFIG) : {};
     // create or copy a world map here (prefer user-provided, otherwise copy any existing global map)
+    
+    setPosterBlock(1,false,false);
+    setPosterBlock(2,false,false);
+    setPosterBlock(3,false,false);
+    setPosterBlock(4,false,false);
+    setPosterBlock(5,false,false);
+    setDoorBlock(true, false);
     if (!config.worldMap) {
         if (window.worldMap && Array.isArray(window.worldMap)) {
             config.worldMap = window.worldMap.map(r => r.slice());
@@ -103,17 +110,17 @@ async function blockEvents(blockData){
             switch(blockData){
                 case 1:
                     if(anomalyState===true)
-                        chkAnomalyNum++;
-                    else if(anomalyState===false)
                         chkAnomalyNum=0;
+                    else if(anomalyState===false)
+                        chkAnomalyNum++;
                     x+=17;
                     y+=27;
                 break;
                 case 2:
                     if(anomalyState===true)
-                        chkAnomalyNum=0;
-                    else if(anomalyState===false)
                         chkAnomalyNum++;
+                    else if(anomalyState===false)
+                        chkAnomalyNum=0;
                     x-=3;
                     y=(startY-y)+startY;
                     rot-=radians(180);
