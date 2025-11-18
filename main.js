@@ -1,18 +1,34 @@
 let engineInstance = null;
 
+//시작 좌표
 let startX = 25.5;
 let startY = 36.5;
 
+//소리
 let doorOpenSound;
 let bgm;
 let walkSound;
 
+//걸음 소리 관련 변수
 let lastStepTime = 0;
 let stepInterval = 400;
-let walkState=0;
+let walkState = 0;
 
 let chkAnomalyNum = 0;
 let anomalyState = false;
+
+//아저씨 관련
+let misterLeftImage = [];
+let misterRightImage = [];
+let misterFrontImage = [];
+let misterBackImage = [];
+let misterWalk = 0;
+let lastStepMisterTime = 0;
+
+//이상현상 관련
+let misterState = false;
+
+//최대 출구까지 수
 const MaxAnomalyNum = 4;
 
 const myWorker = new Worker("worker.js");
@@ -32,7 +48,6 @@ const DOOR_X = 14;
 const DOOR_Y = 20;
 const OPEN_DOOR_EVENT_X = 11;
 const OPEN_DOOR_EVENT_Y = 14;
-
 
 //플레이어 및 맵 기본 정보와 벽 데이터 불러오기
 function preload() {
@@ -64,7 +79,6 @@ function preload() {
     }
   }
 
-
   config.assets = config.assets || assets.slice();
   // mirror to global for compatibility
   try {
@@ -88,6 +102,15 @@ function preload() {
   doorOpenSound = loadSound("assets/door_open_sound.mp3");
   bgm = loadSound("assets/bgm.wav");
   walkSound = loadSound("assets/walk.wav");
+
+  misterLeftImage[0] = loadImage("assets/misterLeftOne.png");
+  misterRightImage[0] = loadImage("assets/misterRightOne.png");
+  misterBackImage[0] = loadImage("assets/misterFrontOne.png");
+  misterFrontImage[0] = loadImage("assets/misterBackOne.png");
+  misterLeftImage[1] = loadImage("assets/misterLeftTwo.png");
+  misterRightImage[1] = loadImage("assets/misterRightTwo.png");
+  misterBackImage[1] = loadImage("assets/misterFrontTwo.png");
+  misterFrontImage[1] = loadImage("assets/misterBackTwo.png");
 }
 
 //엔진이 가져와졌는지 체크
@@ -97,19 +120,21 @@ function setup() {
 
   if (typeof engineInstance.enableKeyboard === "function")
     engineInstance.enableKeyboard();
-
   bgm.setLoop(true);
   bgm.play();
 }
 
 let data = null;
+let now = 0;
 
 function draw() {
   if (!engineInstance) return;
-  // delegate to engine's frame renderer
+  now = millis();
 
-  if( walkState > 0 ){
-    let now = millis();
+  if (misterState === true) {
+    updateMister();
+  }
+  if (walkState > 0) {
     if (now - lastStepTime > stepInterval) {
       walkSound.play();
       lastStepTime = now;
@@ -122,18 +147,21 @@ function draw() {
   blockEvents(blockData);
 }
 
-function setEventBlock(x,y, eventNum) {
-    basicMap[y][x] = -1*eventNum;
+function setEventBlock(x, y, eventNum) {
+  basicMap[y][x] = -1 * eventNum;
 }
 
 let chkI = 0;
+let chkOldBlock = 0;
 async function blockEvents(blockData) {
   if (!engineInstance) return;
-
+  if (chkOldBlock == blockData) return;
+  chkOldBlock = blockData;
   if (blockData != 0) {
     blockData *= -1;
 
-    if (blockData < 10) { //이동 이벤트
+    if (blockData < 10) {
+      //이동 이벤트
       let x = engineInstance.getPlayerLocX();
       let y = engineInstance.getPlayerLocY();
       let rot = engineInstance.getPlayerRot();
@@ -154,8 +182,10 @@ async function blockEvents(blockData) {
           break;
       }
 
+
       if (chkEndingInit(chkAnomalyNum)) {
         makeEndingMap();
+        setMister(false);
       } else {
         makeRandomAnomalyMap();
       }
@@ -165,17 +195,16 @@ async function blockEvents(blockData) {
       engineInstance.setWorldMap(basicMap);
       engineInstance.setPlayerLoc(x, y);
       engineInstance.setPlayerRot(rot);
-    } 
-    else if (blockData < 30) { //이상현상 이벤트
+    } else if (blockData < 30) {
+      //이상현상 이벤트
 
       switch (blockData) {
         case OPEN_DOOR_EVENT:
           openDoor();
           break;
       }
-
-    } 
-    else if (blockData == ENDING_EVENT) { //엔딩 이벤트
+    } else if (blockData == ENDING_EVENT) {
+      //엔딩 이벤트
       //ending
     }
   }
@@ -189,13 +218,13 @@ function chkEndingInit(anomalyNum) {
 }
 
 function makeEndingMap() {
-  basicMap[ENDING_BLOCK_Y][ENDING_BLOCK_X+0] = LEFT_STAIRS;
-  basicMap[ENDING_BLOCK_Y][ENDING_BLOCK_X+1] = CENTER_STAIRS;
-  basicMap[ENDING_BLOCK_Y][ENDING_BLOCK_X+2] = RIGHT_STAIRS;
+  basicMap[ENDING_BLOCK_Y][ENDING_BLOCK_X + 0] = LEFT_STAIRS;
+  basicMap[ENDING_BLOCK_Y][ENDING_BLOCK_X + 1] = CENTER_STAIRS;
+  basicMap[ENDING_BLOCK_Y][ENDING_BLOCK_X + 2] = RIGHT_STAIRS;
 
-  setEventBlock(ENDING_BLOCK_X+0, ENDING_BLOCK_Y+1, ENDING_EVENT);
-  setEventBlock(ENDING_BLOCK_X+1, ENDING_BLOCK_Y+1, ENDING_EVENT);
-  setEventBlock(ENDING_BLOCK_X+2, ENDING_BLOCK_Y+1, ENDING_EVENT);
+  setEventBlock(ENDING_BLOCK_X + 0, ENDING_BLOCK_Y + 1, ENDING_EVENT);
+  setEventBlock(ENDING_BLOCK_X + 1, ENDING_BLOCK_Y + 1, ENDING_EVENT);
+  setEventBlock(ENDING_BLOCK_X + 2, ENDING_BLOCK_Y + 1, ENDING_EVENT);
 
   setPosterBlock(1, false, true);
   setPosterBlock(2, false, true);
@@ -203,12 +232,12 @@ function makeEndingMap() {
   setPosterBlock(4, false, true);
   setPosterBlock(5, false, true);
   setDoorBlock(false, false);
+  setMister(false);
 }
 
 function makeRandomAnomalyMap() {
-  anomalyState = random([true, false]);
+  anomalyState = random([true, false, true]);
   if (anomalyState === true) {
-    //basicMap = await myWorker.postMessage(basicMap);
     console.log("anomaly true ", chkI++);
     setPosterBlock(1, random([true, false]), random([true, false]));
     setPosterBlock(2, random([true, false]), random([true, false]));
@@ -216,6 +245,9 @@ function makeRandomAnomalyMap() {
     setPosterBlock(4, random([true, false]), random([true, false]));
     setPosterBlock(5, random([true, false]), random([true, false]));
     setDoorBlock(random([true, false]), random([true, false]));
+    setMister(random([true, false]));
+  } else {
+    setMister(misterState);
   }
 }
 
@@ -259,33 +291,73 @@ function setDoorBlock(use, open = false) {
   }
   basicMap[DOOR_Y][DOOR_X] = DOOR_CLOSED;
   if (open === true) {
-    setEventBlock(OPEN_DOOR_EVENT_X+0, OPEN_DOOR_EVENT_Y, OPEN_DOOR_EVENT);
-    setEventBlock(OPEN_DOOR_EVENT_X+1, OPEN_DOOR_EVENT_Y, OPEN_DOOR_EVENT);
-    setEventBlock(OPEN_DOOR_EVENT_X+2, OPEN_DOOR_EVENT_Y, OPEN_DOOR_EVENT);
+    setEventBlock(OPEN_DOOR_EVENT_X + 0, OPEN_DOOR_EVENT_Y, OPEN_DOOR_EVENT);
+    setEventBlock(OPEN_DOOR_EVENT_X + 1, OPEN_DOOR_EVENT_Y, OPEN_DOOR_EVENT);
+    setEventBlock(OPEN_DOOR_EVENT_X + 2, OPEN_DOOR_EVENT_Y, OPEN_DOOR_EVENT);
   }
 }
 
 function openDoor() {
   engineInstance.setBlock(DOOR_X, DOOR_Y, DOOR_OPEN);
-  engineInstance.setBlock(OPEN_DOOR_EVENT_X+0, OPEN_DOOR_EVENT_Y, 0);
-  engineInstance.setBlock(OPEN_DOOR_EVENT_X+1, OPEN_DOOR_EVENT_Y, 0);
-  engineInstance.setBlock(OPEN_DOOR_EVENT_X+2, OPEN_DOOR_EVENT_Y, 0);
-  basicMap[OPEN_DOOR_EVENT_Y][OPEN_DOOR_EVENT_X+0] = 0;
-  basicMap[OPEN_DOOR_EVENT_Y][OPEN_DOOR_EVENT_X+1] = 0;
-  basicMap[OPEN_DOOR_EVENT_Y][OPEN_DOOR_EVENT_X+2] = 0;
+  engineInstance.setBlock(OPEN_DOOR_EVENT_X + 0, OPEN_DOOR_EVENT_Y, 0);
+  engineInstance.setBlock(OPEN_DOOR_EVENT_X + 1, OPEN_DOOR_EVENT_Y, 0);
+  engineInstance.setBlock(OPEN_DOOR_EVENT_X + 2, OPEN_DOOR_EVENT_Y, 0);
+  basicMap[OPEN_DOOR_EVENT_Y][OPEN_DOOR_EVENT_X + 0] = 0;
+  basicMap[OPEN_DOOR_EVENT_Y][OPEN_DOOR_EVENT_X + 1] = 0;
+  basicMap[OPEN_DOOR_EVENT_Y][OPEN_DOOR_EVENT_X + 2] = 0;
   doorOpenSound.play();
+}
+
+function setMister(state) {
+  if (state === false) {
+    misterState = false;
+    engineInstance.removeSprite("mister");
+    return;
+  }
+  if( misterState === true)
+  {
+    engineInstance.removeSprite("mister");
+  }
+
+  engineInstance.addSprite({
+    x: 13.5,
+    y: 9,
+    images: {
+      front: misterFrontImage[misterWalk],
+      back: misterBackImage[misterWalk],
+      left: misterLeftImage[misterWalk],
+      right: misterRightImage[misterWalk],
+    },
+    rot: radians(0),
+    id: "mister",
+  });
+  misterState = true;
+}
+
+function updateMister() {
+  engineInstance.moveSpriteTowards("mister", 13.5, 26.5, 0.01);
+  if (now - lastStepMisterTime > stepInterval) {
+    lastStepMisterTime = now;
+    engineInstance.updateSpriteImages("mister", {
+      front: misterBackImage[misterWalk],
+      back: misterFrontImage[misterWalk],
+      left: misterLeftImage[misterWalk],
+      right: misterRightImage[misterWalk],
+    });
+    misterWalk = (misterWalk + 1) % 2;
+  }
 }
 
 function keyPressed() {
   if (!engineInstance) return;
-  if (keyCode  ==  UP_ARROW || keyCode  ==  DOWN_ARROW) {
+  if (keyCode == UP_ARROW || keyCode == DOWN_ARROW) {
     walkState++;
   }
 }
 
 function keyReleased() {
   if (!engineInstance) return;
-  if (keyCode  ==  UP_ARROW || keyCode  ==  DOWN_ARROW) {
+  if (keyCode == UP_ARROW || keyCode == DOWN_ARROW) {
     walkState--;
   }
 }

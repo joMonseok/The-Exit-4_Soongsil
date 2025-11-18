@@ -26,6 +26,7 @@ class FullEngine {
 
     this.wallImages = [];
     this.screenLines = [];
+    this.sprites = []; // {x, y, img, id?} — 월드 좌표에 배치된 스프라이트들
     this._keyboardEnabled = false;
     this._boundKeyDown = this._onKeyDown.bind(this);
     this._boundKeyUp = this._onKeyUp.bind(this);
@@ -143,6 +144,8 @@ class FullEngine {
           image(img, px, info.top, this.stripWidth, info.height, srcX, 0, this.stripWidth, srcSize);
         }
     }
+    // 스프라이트 렌더링 (벽 뒤 오클루전 처리 포함)
+    this.drawSprites();
   }
 
   move() { const moveStep = (this.player.speed || 0) * (this.player.moveSpeed || 0.1); this.player.rot += (this.player.dir || 0) * (this.player.rotSpeed || (3 * Math.PI / 180)); const newX = this.player.x + Math.cos(this.player.rot) * moveStep; const newY = this.player.y + Math.sin(this.player.rot) * moveStep; if (this.isBlocking(newX, newY)) return; this.player.x = newX; this.player.y = newY; }
@@ -236,6 +239,316 @@ class FullEngine {
   getPlayerRot()
   {
     return this.player.rot;
+  }
+
+  // === 스프라이트 관리 메서드 ===
+  /**
+   * 스프라이트 추가: {x, y, img, id?, rot?, images?}
+   * x, y는 월드 좌표 (타일 중심은 정수+0.5)
+   * rot: 스프라이트가 바라보는 방향 (라디안, 선택사항)
+   * images: 방향별 이미지 {front, back, left, right} 또는 단일 img
+   */
+  addSprite(sprite) {
+    if (!sprite) return;
+    // 단일 이미지 또는 방향별 이미지 지원
+    if (!sprite.img && !sprite.images) return;
+    
+    // rot 기본값 설정 (0 = 오른쪽)
+    if (sprite.rot === undefined) sprite.rot = 0;
+    
+    this.sprites.push(sprite);
+    return sprite;
+  }
+  removeSprite(id) {
+    this.sprites = this.sprites.filter(s => s.id !== id);
+  }
+  clearSprites() {
+    this.sprites = [];
+  }
+
+  /**
+   * ID로 스프라이트 찾기
+   */
+  getSprite(id) {
+    return this.sprites.find(s => s.id === id);
+  }
+
+  /**
+   * 스프라이트 위치 업데이트 (실시간 이동)
+   * @param {string|number} id - 스프라이트 ID
+   * @param {number} x - 새 X 좌표
+   * @param {number} y - 새 Y 좌표
+   * @returns {boolean} 성공 여부
+   */
+  updateSpritePosition(id, x, y) {
+    const sprite = this.getSprite(id);
+    if (!sprite) return false;
+    sprite.x = x;
+    sprite.y = y;
+    return true;
+  }
+
+  /**
+   * 스프라이트 방향(회전) 설정
+   * @param {string|number} id - 스프라이트 ID
+   * @param {number} rot - 방향 (라디안)
+   * @returns {boolean} 성공 여부
+   */
+  updateSpriteRotation(id, rot) {
+    const sprite = this.getSprite(id);
+    if (!sprite) return false;
+    sprite.rot = rot;
+    return true;
+  }
+
+  /**
+   * 스프라이트 이미지 교체 (애니메이션 등)
+   * @param {string|number} id - 스프라이트 ID
+   * @param {p5.Image} newImg - 새 이미지
+   * @returns {boolean} 성공 여부
+   */
+  updateSpriteImage(id, newImg) {
+    const sprite = this.getSprite(id);
+    if (!sprite || !newImg) return false;
+    sprite.img = newImg;
+    return true;
+  }
+
+  /**
+   * 스프라이트 방향별 이미지 설정
+   * @param {string|number} id - 스프라이트 ID
+   * @param {Object} images - {front, back, left, right}
+   */
+  updateSpriteImages(id, images) {
+    const sprite = this.getSprite(id);
+    if (!sprite || !images) return false;
+    sprite.images = images;
+    return true;
+  }
+
+  /**
+   * 스프라이트를 특정 방향으로 이동 (방향도 자동 업데이트)
+   * @param {string|number} id - 스프라이트 ID
+   * @param {number} dx - X 방향 이동량
+   * @param {number} dy - Y 방향 이동량
+   * @param {boolean} checkCollision - 충돌 체크 여부 (기본 true)
+   * @param {boolean} updateRotation - 이동 방향으로 회전 업데이트 (기본 true)
+   * @returns {boolean} 성공 여부
+   */
+  moveSprite(id, dx, dy, checkCollision = true, updateRotation = true) {
+    const sprite = this.getSprite(id);
+    if (!sprite) return false;
+    
+    const newX = sprite.x + dx;
+    const newY = sprite.y + dy;
+    
+    // 충돌 체크 옵션
+    if (checkCollision && this.isBlocking(newX, newY)) {
+      return false;
+    }
+    
+    sprite.x = newX;
+    sprite.y = newY;
+    
+    // 이동 방향으로 회전 업데이트
+    if (updateRotation && (dx !== 0 || dy !== 0)) {
+      sprite.rot = Math.atan2(dy, dx);
+    }
+    
+    return true;
+  }
+
+  /**
+   * 스프라이트를 목표 지점으로 이동 (부드러운 이동 + 방향 전환)
+   * @param {string|number} id - 스프라이트 ID
+   * @param {number} targetX - 목표 X 좌표
+   * @param {number} targetY - 목표 Y 좌표
+   * @param {number} speed - 이동 속도 (0.1 = 느림, 1.0 = 빠름)
+   * @param {boolean} checkCollision - 충돌 체크 여부
+   * @param {boolean} updateRotation - 이동 방향으로 회전 (기본 true)
+   * @returns {boolean} 목표에 도달했는지 여부
+   */
+  moveSpriteTowards(id, targetX, targetY, speed = 0.05, checkCollision = true, updateRotation = true) {
+    const sprite = this.getSprite(id);
+    if (!sprite) return false;
+    
+    const dx = targetX - sprite.x;
+    const dy = targetY - sprite.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    // 이미 목표에 도달
+    if (dist < 0.01) return true;
+    
+    // 방향 업데이트
+    if (updateRotation) {
+      sprite.rot = Math.atan2(dy, dx);
+    }
+    
+    // 정규화된 방향 벡터에 속도 곱하기
+    const moveX = (dx / dist) * speed;
+    const moveY = (dy / dist) * speed;
+    
+    // 목표를 지나치지 않도록
+    if (dist < speed) {
+      sprite.x = targetX;
+      sprite.y = targetY;
+      return true;
+    }
+    
+    const newX = sprite.x + moveX;
+    const newY = sprite.y + moveY;
+    
+    if (checkCollision && this.isBlocking(newX, newY)) {
+      return false;
+    }
+    
+    sprite.x = newX;
+    sprite.y = newY;
+    return false;
+  }
+
+  /**
+   * 스프라이트를 플레이어 방향으로 이동 (AI 추적)
+   * @param {string|number} id - 스프라이트 ID
+   * @param {number} speed - 이동 속도
+   * @param {boolean} checkCollision - 충돌 체크
+   * @param {boolean} updateRotation - 회전 업데이트
+   * @returns {boolean} 성공 여부
+   */
+  moveSpriteTowardsPlayer(id, speed = 0.05, checkCollision = true, updateRotation = true) {
+    return this.moveSpriteTowards(id, this.player.x, this.player.y, speed, checkCollision, updateRotation);
+  }
+
+  /**
+   * 스프라이트가 현재 바라보는 방향에 따라 적절한 이미지 선택
+   * 플레이어 기준 상대 각도로 앞/뒤/좌/우 판단
+   * @param {Object} sprite - 스프라이트 객체
+   * @returns {p5.Image} 현재 방향에 맞는 이미지
+   */
+  _getSpriteDirectionalImage(sprite) {
+    // 방향별 이미지가 없으면 기본 img 사용
+    if (!sprite.images) return sprite.img;
+    
+    // 스프라이트 → 플레이어 방향 계산
+    const dx = this.player.x - sprite.x;
+    const dy = this.player.y - sprite.y;
+    const angleToPlayer = Math.atan2(dy, dx);
+    
+    // 스프라이트의 방향과 플레이어 방향의 상대 각도
+    let relAngle = angleToPlayer - sprite.rot;
+    
+    // -PI ~ PI 범위로 정규화
+    while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+    while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+    
+    // 8방향으로 나누어 앞/뒤/좌/우 판단
+    const absAngle = Math.abs(relAngle);
+    
+    if (absAngle < Math.PI / 4) {
+      // 앞 (플레이어가 스프라이트 정면)
+      return sprite.images.front || sprite.img;
+    } else if (absAngle > Math.PI * 3 / 4) {
+      // 뒤 (플레이어가 스프라이트 뒤)
+      return sprite.images.back || sprite.img;
+    } else if (relAngle > 0) {
+      // 왼쪽
+      return sprite.images.left || sprite.img;
+    } else {
+      // 오른쪽
+      return sprite.images.right || sprite.img;
+    }
+  }
+
+  /**
+   * 스프라이트 렌더링 (벽 뒤 오클루전 처리) - 성능 최적화 버전
+   * drawScreen()에서 벽 렌더 후 호출됨
+   */
+  drawSprites() {
+    if (!this.sprites.length) return;
+    const px = this.player.x;
+    const py = this.player.y;
+    const prot = this.player.rot;
+    const halfFov = this.fov / 2;
+    const tanHalfFov = Math.tan(halfFov);
+    const screenHalf = this.screenWidth / 2;
+    const screenMid = this.screenHeight / 2;
+
+    // 스프라이트를 거리 기준 정렬 (먼 것부터 그려 가까운 것이 위에 오도록)
+    const projected = [];
+    for (let s of this.sprites) {
+      const dx = s.x - px;
+      const dy = s.y - py;
+      const distSq = dx*dx + dy*dy;
+      if (distSq < 0.0001) continue;
+
+      const dist = Math.sqrt(distSq);
+      let ang = Math.atan2(dy, dx);
+      let rel = ang - prot;
+      while (rel < -Math.PI) rel += Math.PI*2;
+      while (rel > Math.PI) rel -= Math.PI*2;
+
+      // 시야 밖이면 스킵
+      if (Math.abs(rel) > halfFov + 0.2) continue;
+
+      const perpDist = dist * Math.cos(rel);
+      if (perpDist <= 0.01) continue;
+
+      // 화면 X 위치 계산 (rel이 음수면 왼쪽, 양수면 오른쪽)
+      const screenX = screenHalf + (Math.tan(rel) / tanHalfFov) * screenHalf;
+      const scale = this.viewDist / perpDist;
+      
+      projected.push({ sprite: s, perpDist, screenX, scale });
+    }
+
+    // 거리순 정렬 (먼 것부터)
+    projected.sort((a, b) => b.perpDist - a.perpDist);
+
+    // 렌더링: 픽셀별 오클루전 체크 + 성능 최적화
+    push();
+    noStroke();
+    
+    for (let p of projected) {
+      const s = p.sprite;
+      
+      // 방향별 이미지 선택 (앞/뒤/좌/우)
+      const img = this._getSpriteDirectionalImage(s);
+      if (!img || !img.width) continue;
+
+      const spriteH = (this.textureSize || 64) * p.scale;
+      const spriteW = (img.width / Math.max(1, img.height)) * spriteH;
+      const drawX = p.screenX - spriteW/2;
+      const drawY = screenMid - spriteH/2;
+
+      // 화면 밖 완전히 벗어난 스프라이트는 스킵
+      if (drawX + spriteW < 0 || drawX >= this.screenWidth) continue;
+
+      const startX = Math.max(0, Math.floor(drawX));
+      const endX = Math.min(this.screenWidth, Math.ceil(drawX + spriteW));
+      
+      // 성능 최적화: 가까울수록(큰 스프라이트) 샘플링 간격 증가
+      // perpDist < 2: 매우 가까움 (4픽셀 간격), < 5: 가까움 (2픽셀), 그 외: 1픽셀
+      const sampleStep = p.perpDist < 2 ? Math.max(4, this.stripWidth) : 
+                         p.perpDist < 5 ? Math.max(2, this.stripWidth) : 
+                         this.stripWidth;
+      
+      // 스트립별로 벽 깊이 체크하며 그리기
+      for (let sx = startX; sx < endX; sx += sampleStep) {
+        const stripIdx = Math.floor(sx / this.stripWidth);
+        const wallInfo = this.screenLines[stripIdx];
+        
+        // 벽이 스프라이트보다 가까우면 해당 스트립 스킵
+        if (wallInfo && wallInfo.dist < p.perpDist) continue;
+
+        const localX = sx - drawX;
+        const srcX = (localX / spriteW) * img.width;
+        const drawWidth = Math.min(sampleStep, endX - sx);
+        const srcWidth = (drawWidth / spriteW) * img.width;
+        
+        image(img, sx, drawY, drawWidth, spriteH, srcX, 0, srcWidth, img.height);
+      }
+    }
+    
+    pop();
   }
 }
 
