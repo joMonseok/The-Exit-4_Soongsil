@@ -4,7 +4,8 @@ let engineInstance = null;
 let startX = 25.5;
 let startY = 36.5;
 
-//소리
+let currentScene = 'title';
+
 let doorOpenSound;
 let bgm;
 let walkSound;
@@ -128,23 +129,35 @@ let data = null;
 let now = 0;
 
 function draw() {
-  if (!engineInstance) return;
-  now = millis();
+    if (!engineInstance) return;
 
-  if (misterState === true) {
-    updateMister();
-  }
-  if (walkState > 0) {
-    if (now - lastStepTime > stepInterval) {
-      walkSound.play();
-      lastStepTime = now;
+    if (currentScene === 'title') {
+        startScreen()
+        return;
     }
-  }
 
-  data = engineInstance.Go();
+    if(currentScene === 'end') {
+        endScreen(
+            () => { currentScene = 'title' }
+        );
+        return;
+    }
+    now = millis();
 
-  let blockData = engineInstance.getPlayerBlock();
-  blockEvents(blockData);
+    if (misterState === true) {
+      updateMister();
+    }
+    if (walkState > 0) {
+      if (now - lastStepTime > stepInterval) {
+        walkSound.play();
+        lastStepTime = now;
+      }
+    }
+
+    data = engineInstance.Go();
+
+    let blockData = engineInstance.getPlayerBlock();
+    blockEvents(blockData);
 }
 
 function setEventBlock(x, y, eventNum) {
@@ -204,8 +217,7 @@ async function blockEvents(blockData) {
           break;
       }
     } else if (blockData == ENDING_EVENT) {
-      //엔딩 이벤트
-      //ending
+      currentScene = 'end';
     }
   }
 }
@@ -353,6 +365,14 @@ function keyPressed() {
   if (keyCode == UP_ARROW || keyCode == DOWN_ARROW) {
     walkState++;
   }
+    if (currentScene === 'title') {
+        if (keyCode === ENTER) {
+            currentScene = 'game';
+            // Ensure keyboard controls are enabled on start
+            if (typeof engineInstance.enableKeyboard === 'function') engineInstance.enableKeyboard();
+        }
+        return;
+    }
 }
 
 function keyReleased() {
@@ -360,6 +380,14 @@ function keyReleased() {
   if (keyCode == UP_ARROW || keyCode == DOWN_ARROW) {
     walkState--;
   }
+}
+
+function mousePressed() {
+    if (!engineInstance) return;
+    if (currentScene === 'title') {
+        currentScene = 'game';
+        if (typeof engineInstance.enableKeyboard === 'function') engineInstance.enableKeyboard();
+    }
 }
 
 // Optional: expose a small API to start/stop automatic rendering
@@ -372,3 +400,6 @@ window.EngineHost = {
   },
   instance: () => engineInstance,
 };
+
+
+
