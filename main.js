@@ -70,7 +70,7 @@ function preload() {
   setPosterBlock(3, false, false);
   setPosterBlock(4, false, false);
   setPosterBlock(5, false, false);
-  setDoorBlock(true, false);
+  //setDoorBlock(true, false);
   if (!config.worldMap) {
     if (window.worldMap && Array.isArray(window.worldMap)) {
       config.worldMap = window.worldMap.map((r) => r.slice());
@@ -121,8 +121,8 @@ function setup() {
 
   if (typeof engineInstance.enableKeyboard === "function")
     engineInstance.enableKeyboard();
-  bgm.setLoop(true);
-  bgm.play();
+  //bgm.setLoop(true);
+  //bgm.play();
 }
 
 let data = null;
@@ -149,7 +149,7 @@ function draw() {
     }
     if (walkState > 0) {
       if (now - lastStepTime > stepInterval) {
-        walkSound.play();
+        //walkSound.play();
         lastStepTime = now;
       }
     }
@@ -198,7 +198,7 @@ async function blockEvents(blockData) {
 
       if (chkEndingInit(chkAnomalyNum)) {
         makeEndingMap();
-        setMister(false);
+        //setMister(false);
       } else {
         makeRandomAnomalyMap();
       }
@@ -243,8 +243,8 @@ function makeEndingMap() {
   setPosterBlock(3, false, true);
   setPosterBlock(4, false, true);
   setPosterBlock(5, false, true);
-  setDoorBlock(false, false);
-  setMister(false);
+  //setDoorBlock(false, false);
+  //setMister(false);
 }
 
 function makeRandomAnomalyMap() {
@@ -256,10 +256,10 @@ function makeRandomAnomalyMap() {
     setPosterBlock(3, random([true, false]), random([true, false]));
     setPosterBlock(4, random([true, false]), random([true, false]));
     setPosterBlock(5, random([true, false]), random([true, false]));
-    setDoorBlock(random([true, false]), random([true, false]));
-    setMister(random([true, false]));
+    //setDoorBlock(random([true, false]), random([true, false]));
+    //setMister(random([true, false]));
   } else {
-    setMister(misterState);
+    //setMister(misterState);
   }
 }
 
