@@ -25,6 +25,7 @@ let misterFrontImage = [];
 let misterBackImage = [];
 let misterWalk = 0;
 let lastStepMisterTime = 0;
+let toUser = false;
 
 //이상현상 관련
 let misterState = false;
@@ -65,12 +66,6 @@ function preload() {
     : {};
   // create or copy a world map here (prefer user-provided, otherwise copy any existing global map)
 
-  setPosterBlock(1, false, false);
-  setPosterBlock(2, false, false);
-  setPosterBlock(3, false, false);
-  setPosterBlock(4, false, false);
-  setPosterBlock(5, false, false);
-  setDoorBlock(true, false);
   if (!config.worldMap) {
     if (window.worldMap && Array.isArray(window.worldMap)) {
       config.worldMap = window.worldMap.map((r) => r.slice());
@@ -123,6 +118,8 @@ function setup() {
     engineInstance.enableKeyboard();
   bgm.setLoop(true);
   bgm.play();
+  makeBasicMap();
+  engineInstance.setWorldMap(basicMap);
 }
 
 let data = null;
@@ -174,6 +171,7 @@ async function blockEvents(blockData) {
     blockData *= -1;
 
     if (blockData < 10) {
+      setMister(false, false);
       //이동 이벤트
       let x = engineInstance.getPlayerLocX();
       let y = engineInstance.getPlayerLocY();
@@ -262,7 +260,16 @@ function makeRandomAnomalyMap() {
     setPosterBlock(4, randomAnomaly[3], false);
     setPosterBlock(5, randomAnomaly[4], false);
     setDoorBlock(true, randomAnomaly[5]);
-    setMister(randomAnomaly[6]);
+    if( randomAnomaly[6] === true)
+    {
+      misterAnomaly = random([true, false]);
+      if(misterAnomaly === true)
+        setMister(false, false);
+      else
+        setMister(true, true);
+    }else{
+      setMister(true, false);
+    }
   } else {
     makeBasicMap();
   }
@@ -275,7 +282,7 @@ function makeBasicMap() {
   setPosterBlock(4, false, false);
   setPosterBlock(5, false, false);
   setDoorBlock(true, false);
-  setMister(false);
+  setMister(true, false);
 }
 
 
@@ -336,9 +343,10 @@ function openDoor() {
   doorOpenSound.play();
 }
 
-function setMister(state) {
+function setMister(state, _toUser = false) {
   if (state === false) {
     misterState = false;
+    toUser = false;
     engineInstance.removeSprite("mister");
     return;
   }
@@ -359,20 +367,43 @@ function setMister(state) {
     rot: radians(0),
     id: "mister",
   });
+  toUser = _toUser;
   misterState = true;
 }
 
 function updateMister() {
-  engineInstance.moveSpriteTowards("mister", 13.5, 26.5, 0.01);
-  if (now - lastStepMisterTime > stepInterval) {
-    lastStepMisterTime = now;
-    engineInstance.updateSpriteImages("mister", {
-      front: misterBackImage[misterWalk],
-      back: misterFrontImage[misterWalk],
-      left: misterLeftImage[misterWalk],
-      right: misterRightImage[misterWalk],
-    });
-    misterWalk = (misterWalk + 1) % 2;
+  if(toUser === false){
+    engineInstance.moveSpriteTowards("mister", 13.5, 26.5, 0.01);
+    if (now - lastStepMisterTime > stepInterval) {
+      lastStepMisterTime = now;
+      engineInstance.updateSpriteImages("mister", {
+        front: misterBackImage[misterWalk],
+        back: misterFrontImage[misterWalk],
+        left: misterLeftImage[misterWalk],
+        right: misterRightImage[misterWalk],
+      });
+      misterWalk = (misterWalk + 1) % 2;
+    }
+  }
+  else{
+    let misterInfo = engineInstance.getSprite("mister");
+    let xDistance = engineInstance.getPlayerLocX() - misterInfo.x;
+    let yDistance = engineInstance.getPlayerLocY() - misterInfo.y;
+    let distance = sqrt(xDistance * xDistance + yDistance * yDistance);
+    if (distance < 0.7) {
+      return;
+    }
+    engineInstance.moveSpriteTowards("mister", engineInstance.getPlayerLocX(), engineInstance.getPlayerLocY(), 0.02);
+    if (now - lastStepMisterTime > stepInterval) {
+      lastStepMisterTime = now;
+      engineInstance.updateSpriteImages("mister", {
+        front: misterBackImage[misterWalk],
+        back: misterBackImage[misterWalk],
+        left: misterBackImage[misterWalk],
+        right: misterBackImage[misterWalk],
+      });
+      misterWalk = (misterWalk + 1) % 2;
+    }
   }
 }
 
