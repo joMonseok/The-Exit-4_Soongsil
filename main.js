@@ -458,6 +458,12 @@ function mousePressed() {
       }
     }
 
+    if (currentScene === 'end') {
+      if(isEndRetryButtonClicked(mouseX, mouseY)) {
+        location.reload();
+      }
+    }
+
 }
 
 // Optional: expose a small API to start/stop automatic rendering
