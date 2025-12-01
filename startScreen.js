@@ -79,6 +79,10 @@ drawRightStationCue(width, height * 0.5, 0.6, color(255));
   textSize(24 * baseK);
   text("Press ENTER to start", width / 2 + glitch, height * 0.82);
   pop();
+
+
+  // === 도움말 버튼 ===
+  drawHelpButton();
 }
 
 // 좌측 역 안내 묶음 (화살표 + 3줄 텍스트)
@@ -171,4 +175,41 @@ function drawRightStationCue(
   text(labelHan, tx, y + 14 * s);
 
   pop();
+}
+
+function drawHelpButton() {
+  const r = HELP_BTN.r;
+  const x = width  - HELP_BTN.marginX - r;
+  const y = height - HELP_BTN.marginY - r;
+
+  push();
+  noStroke();
+
+  // 버튼 배경 (살짝 반투명)
+  fill(20, 20, 25, 200);
+  circle(x, y, r * 2);
+
+  // 테두리
+  stroke(200, 220);
+  strokeWeight(1.5);
+  noFill();
+  circle(x, y, r * 2 - 3);
+
+  // ? 글자
+  noStroke();
+  fill(230);
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(r * 1.2);
+  text("?", x, y);
+  pop();
+}
+
+function isHelpButtonClicked(mx, my) {
+  const { r, marginX, marginY } = HELP_BTN;
+  const x = width  - marginX - r;
+  const y = height - marginY - r;
+
+  const d = dist(mx, my, x, y);
+  return d <= r;
 }

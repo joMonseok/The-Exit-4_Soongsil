@@ -51,6 +51,12 @@ const DOOR_Y = 20;
 const OPEN_DOOR_EVENT_X = 11;
 const OPEN_DOOR_EVENT_Y = 14;
 
+const HELP_BTN = {
+  r: 6,   // 반지름
+  marginX: 24,
+  marginY: 20
+};
+
 //플레이어 및 맵 기본 정보와 벽 데이터 불러오기
 function preload() {
   // Create FullEngine instance early so its preload() can call loadImage in the p5 preload phase.
@@ -127,6 +133,11 @@ let now = 0;
 
 function draw() {
     if (!engineInstance) return;
+
+    if (currentScene === 'guide') {
+        guideScreen()
+        return;
+    }
 
     if (currentScene === 'title') {
         startScreen()
@@ -431,10 +442,22 @@ function keyReleased() {
 
 function mousePressed() {
     if (!engineInstance) return;
+
     if (currentScene === 'title') {
+      if(isHelpButtonClicked(mouseX, mouseY)) {
+        currentScene = 'guide';
+      } else {
         currentScene = 'game';
         if (typeof engineInstance.enableKeyboard === 'function') engineInstance.enableKeyboard();
+      }
     }
+
+    if (currentScene === 'guide') {
+      if(isGuideCloseButtonClicked(mouseX, mouseY)) {
+        currentScene = 'title';
+      }
+    }
+
 }
 
 // Optional: expose a small API to start/stop automatic rendering
@@ -447,6 +470,3 @@ window.EngineHost = {
   },
   instance: () => engineInstance,
 };
-
-
-
